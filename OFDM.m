@@ -14,7 +14,6 @@ block_num = 10000;
 pilot_interval = 5;
 
 % FFT点数
-
 N_fft = 1024;     
 
 % 调制阶数：4(QPSK) 或 16(16QAM)
@@ -36,7 +35,7 @@ N_bit = N_sc * B;
 length_CP = 73;
 
 % equalization method, 0: ZF, 1:MMSE
-equal_method = 0;
+equal_method = 1;
 
 for snr_count = 1:length(SNR_list)
     
@@ -46,6 +45,7 @@ for snr_count = 1:length(SNR_list)
     sigma2 = N_sc / (10 ^ (snr / 10) * N_fft ^ 2);
     
     for count = 1 : block_num
+        snr_count, count
         
         %生成信息比特
         msg = round(rand(1, N_bit));
@@ -105,9 +105,9 @@ for snr_count = 1:length(SNR_list)
         % 输出：长度为N_fft的接收OFDM符号r_ofdm
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        x_h = conv(x_ofdm, h, 'same');
-        x_h_awgn = x_ofdm + randn(1, length(x_h)) * sqrt(0.5 * sigma2) + randn(1, length(x_h)) * sqrt(0.5 * sigma2) * 1i;
-        r_ofdm = x_h_awgn(length_CP+1:end);
+        x_h = conv(x_ofdm, h);
+        x_h_awgn = x_h + randn(1, length(x_h)) * sqrt(0.5 * sigma2) + randn(1, length(x_h)) * sqrt(0.5 * sigma2) * 1i;
+        r_ofdm = x_h_awgn(length_CP+1:length_CP+N_fft);
         
         %% OFDM解调部分       
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,7 +125,7 @@ for snr_count = 1:length(SNR_list)
         % channel estimate
         pilot_matrix_r = r_fft(pilot_idx, :);
         h_pilot = pilot_matrix_r ./ pilot_matrix;
-        h_data = interp1(pilot_idx, h_pilot, data_idx)';
+        h_data = interp1(pilot_idx, h_pilot, data_idx).';
 
         % equalization
         if equal_method == 0 % ZF equalization
@@ -142,9 +142,9 @@ for snr_count = 1:length(SNR_list)
 
         % demodulation
         if Q == 4
-            msg_r_int = pskdemod(data_r, Q)';
+            msg_r_int = pskdemod(data_r, Q).';
         elseif Q == 16
-            msg_r_int = qamdemod(sqrt(10) * data_r, Q)';
+            msg_r_int = qamdemod(sqrt(10) * data_r, Q).';
         end
 
         msg_r_bit = int2bit(msg_r_int, B);
